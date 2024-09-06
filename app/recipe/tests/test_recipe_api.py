@@ -161,12 +161,11 @@ class PrivateRecipeApiTests(TestCase):
         payload = {
             'title': 'Updated Title',
             'time_minutes': 11,
-            'price' : Decimal(12.5),
+            'price': Decimal(12.5),
         }
         res = self.client.put(url, payload)
 
         recipe.refresh_from_db()
-        serializer = RecipeDetailSerializer(recipe)
 
         for k, v in payload.items():
             self.assertEqual(getattr(recipe, k), v)
