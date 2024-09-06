@@ -146,3 +146,30 @@ class PrivateRecipeApiTests(TestCase):
         self.assertEqual(recipe.title, payload['title'])
         self.assertEqual(recipe.link, recipe_link)
         self.assertEqual(self.user, recipe.user)
+
+    def test_full_update_recipe(self):
+        """Test updating a recipe with patch."""
+        recipe = create_recipe(
+            self.user,
+            title='Test Recipe',
+            time_minutes=10,
+            price=Decimal(10.5),
+        )
+
+        url = detail_url(recipe.id)
+
+        payload = {
+            'title': 'Updated Title',
+            'time_minutes': 11,
+            'price' : Decimal(12.5),
+        }
+        res = self.client.put(url, payload)
+
+        recipe.refresh_from_db()
+        serializer = RecipeDetailSerializer(recipe)
+
+        for k, v in payload.items():
+            self.assertEqual(getattr(recipe, k), v)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.user, recipe.user)
