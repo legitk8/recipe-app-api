@@ -237,3 +237,49 @@ class PrivateRecipeApiTests(TestCase):
             ).exists()
 
             self.assertTrue(exists)
+
+    def test_create_tag_on_update(self):
+        """Test creating a new tag on a recipe update."""
+        recipe = create_recipe(self.user)
+        url = detail_url(recipe.id)
+
+        payload = {'tags': [{'name': 'Veg'}]}
+        res = self.client.patch(url, payload, format='json')
+
+        tag = Tag.objects.get(user=self.user, name='Veg')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(tag.name, 'Veg')
+        self.assertIn(tag, recipe.tags.all())
+
+    def test_assign_tag_on_update(self):
+        """Test updating recipe with an existing tag."""
+        tag_veg = Tag.objects.create(name='Veg', user=self.user)
+        tag_non_veg = Tag.objects.create(name='Non-Veg', user=self.user)
+        recipe = create_recipe(self.user)
+        recipe.tags.add(tag_veg)
+
+        url = detail_url(recipe.id)
+        payload = {'tags': [{'name': 'Non-Veg'}]}
+        res = self.client.patch(url, payload, format='json')
+
+        tags = Tag.objects.filter(user=self.user)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(tags.count(), 2)
+        self.assertEqual(recipe.tags.count(), 1)
+        self.assertIn(tag_non_veg, recipe.tags.all())
+        self.assertNotIn(tag_veg, recipe.tags.all())
+
+    def test_clear_recipe_tags_on_update(self):
+        """Test clearing recipe tags."""
+        tag = Tag.objects.create(name='Veg', user=self.user)
+        recipe = create_recipe(self.user)
+        recipe.tags.add(tag)
+
+        url = detail_url(recipe.id)
+        payload = {'tags': []}
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.tags.count(), 0)
