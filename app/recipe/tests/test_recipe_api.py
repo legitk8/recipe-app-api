@@ -351,3 +351,59 @@ class PrivateRecipeApiTests(TestCase):
             ).exists()
 
             self.assertTrue(exists)
+
+    def test_create_ingredient_on_update(self):
+        """Test creating a new ingredient on recipe update."""
+        recipe = create_recipe(self.user)
+        url = detail_url(recipe.id)
+
+        payload = {'ingredients': [{'name': 'Soy Sauce'}]}
+        res = self.client.patch(url, payload, format='json')
+
+        ingredient = Ingredient.objects.get(user=self.user, name='Soy Sauce')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(ingredient, recipe.ingredients.all())
+
+    def test_assign_ingredient_on_update(self):
+        """Test assigning an existing ingredient on recipe update."""
+        ingredient_salt = Ingredient.objects.create(
+            user=self.user,
+            name='Salt'
+        )
+        ingredient_sugar = Ingredient.objects.create(
+            user=self.user,
+            name='Sugar'
+        )
+        recipe = create_recipe(user=self.user)
+        recipe.ingredients.add(ingredient_salt)
+
+        url = detail_url(recipe.id)
+
+        payload = {'ingredients': [{'name': 'Sugar'}]}
+        res = self.client.patch(url, payload, format='json')
+
+        ingredients = Ingredient.objects.filter(user=self.user)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(ingredients.count(), 2)
+        self.assertEqual(recipe.ingredients.count(), 1)
+        self.assertIn(ingredient_sugar, recipe.ingredients.all())
+        self.assertNotIn(ingredient_salt, recipe.ingredients.all())
+
+    def test_clear_ingredients_on_update(self):
+        """Test clearing ingredients on update."""
+        ingredient_salt = Ingredient.objects.create(
+            user=self.user,
+            name='Salt'
+        )
+        recipe = create_recipe(user=self.user)
+        recipe.ingredients.add(ingredient_salt)
+
+        url = detail_url(recipe.id)
+
+        payload = {'ingredients': []}
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(recipe.ingredients.count(), 0)
